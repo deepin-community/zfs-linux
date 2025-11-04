@@ -1,3 +1,9 @@
+zfs-linux (2.2.6-1deepin1) unstable; urgency=medium
+
+  * Change error to warning
+
+ -- lichenggang <lichenggang@deepin.org>  Tue, 04 Nov 2025 16:36:06 +0800
+
 zfs-linux (2.2.6-1) unstable; urgency=medium
 
   * New upstream version 2.2.6
