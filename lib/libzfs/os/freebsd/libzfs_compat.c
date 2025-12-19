@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: CDDL-1.0
 /*
  * CDDL HEADER START
  *
@@ -212,7 +213,7 @@ libzfs_error_init(int error)
 		msglen -= len;
 	}
 
-	(void) snprintf(msg, msglen, "%s", strerror(error));
+	(void) snprintf(msg, msglen, "%s", zfs_strerror(error));
 
 	return (errbuf);
 }

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-2-Clause
 /*
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -45,11 +46,11 @@
 #define	F_SEEK_HOLE	FIOSEEKHOLE
 
 struct opensolaris_utsname {
-	char	*sysname;
-	char	*nodename;
-	char	*release;
-	char	version[32];
-	char	*machine;
+	const char	*sysname;
+	const char	*nodename;
+	const char	*release;
+	char		version[32];
+	const char	*machine;
 };
 
 #define	task_io_account_read(n)

@@ -1,3 +1,4 @@
+.\" SPDX-License-Identifier: CDDL-1.0
 .\"
 .\" CDDL HEADER START
 .\"
@@ -71,7 +72,7 @@ state of this vdev such as online, faulted, or offline
 .It Sy guid
 globally unique id of this vdev
 .It Sy asize
-The allocable size of this vdev
+The allocatable size of this vdev
 .It Sy psize
 The physical size of this vdev
 .It Sy ashift
@@ -95,15 +96,21 @@ The physical path to the device
 .It Sy encpath
 The enclosure path to the device
 .It Sy fru
-Field Replacable Unit, usually a model number
+Field Replaceable Unit, usually a model number
 .It Sy parent
 Parent of this vdev
 .It Sy children
 Comma separated list of children of this vdev
 .It Sy numchildren
 The number of children belonging to this vdev
-.It Sy read_errors , write_errors , checksum_errors , initialize_errors
+.It Sy read_errors , write_errors , checksum_errors , initialize_errors , trim_errors
 The number of errors of each type encountered by this vdev
+.It Sy slow_ios
+The number of slow I/Os encountered by this vdev,
+These represent I/O operations that didn't complete in
+.Sy zio_slow_io_ms
+milliseconds
+.Pq Sy 30000 No by default .
 .It Sy null_ops , read_ops , write_ops , free_ops , claim_ops , trim_ops
 The number of I/O operations of each type performed by this vdev
 .It Xo
@@ -113,6 +120,8 @@ The number of I/O operations of each type performed by this vdev
 The cumulative size of all operations of each type performed by this vdev
 .It Sy removing
 If this device is currently being removed from the pool
+.It Sy trim_support
+Indicates if a leaf device supports trim operations.
 .El
 .Pp
 The following native properties can be used to change the behavior of a vdev.
@@ -139,7 +148,7 @@ A text comment up to 8192 characters long
 .It Sy bootsize
 The amount of space to reserve for the EFI system partition
 .It Sy failfast
-If this device should propage BIO errors back to ZFS, used to disable
+If this device should propagate BIO errors back to ZFS, used to disable
 failfast.
 .It Sy path
 The path to the device for this vdev

@@ -1,0 +1,56 @@
+From a77d641f01b38726acba487219e553915403df87 Mon Sep 17 00:00:00 2001
+From: Brian Atkinson <batkinson@lanl.gov>
+Date: Thu, 24 Apr 2025 13:55:21 -0400
+Subject: [PATCH] Export correct symbols for Lustre Direct I/O
+
+Originally the Lustre ZFS OSD code was going to use zfs_uio_t structs
+for supporting Direct I/O with ZFS. However, this has changed to using
+abd_t structs instead. This exports the proper symbols that will be used
+by the Lustre ZFS OSD code.
+
+Reviewed-by: Tony Hutter <hutter2@llnl.gov>
+Reviewed-by: Alexander Motin <mav@FreeBSD.org>
+Signed-off-by: Brian Atkinson <batkinson@lanl.gov>
+Closes #17256
+(cherry picked from commit 7031a48c7077822bf6e3c53b3e753155ee7fbc1c)
+---
+ module/os/linux/zfs/abd_os.c | 2 ++
+ module/zfs/abd.c             | 2 ++
+ module/zfs/dmu_direct.c      | 4 ++--
+ 3 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/module/os/linux/zfs/abd_os.c b/module/os/linux/zfs/abd_os.c
+index 8e4d271976ea..e1140b31a97a 100644
+--- a/module/os/linux/zfs/abd_os.c
++++ b/module/os/linux/zfs/abd_os.c
+@@ -1340,6 +1340,8 @@ abd_bio_map_off(struct bio *bio, abd_t *abd,
+ 	return (io_size);
+ }
+ 
++EXPORT_SYMBOL(abd_alloc_from_pages);
++
+ /* Tunable Parameters */
+ module_param(zfs_abd_scatter_enabled, int, 0644);
+ MODULE_PARM_DESC(zfs_abd_scatter_enabled,
+diff --git a/module/zfs/abd.c b/module/zfs/abd.c
+index c2784b9af035..826928e67350 100644
+--- a/module/zfs/abd.c
++++ b/module/zfs/abd.c
+@@ -1210,3 +1210,5 @@ abd_raidz_rec_iterate(abd_t **cabds, abd_t **tabds,
+ 	}
+ 	abd_exit_critical(flags);
+ }
++
++EXPORT_SYMBOL(abd_free);
+diff --git a/module/zfs/dmu_direct.c b/module/zfs/dmu_direct.c
+index 319aaf30be5a..2d5253a5d060 100644
+--- a/module/zfs/dmu_direct.c
++++ b/module/zfs/dmu_direct.c
+@@ -393,5 +393,5 @@ dmu_write_uio_direct(dnode_t *dn, zfs_uio_t *uio, uint64_t size, dmu_tx_t *tx)
+ }
+ #endif /* _KERNEL */
+ 
+-EXPORT_SYMBOL(dmu_read_uio_direct);
+-EXPORT_SYMBOL(dmu_write_uio_direct);
++EXPORT_SYMBOL(dmu_read_abd);
++EXPORT_SYMBOL(dmu_write_abd);

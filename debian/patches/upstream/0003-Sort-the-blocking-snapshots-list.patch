@@ -1,0 +1,49 @@
+From ad63ab2d90c5072944b71b0ccd11531e8665c843 Mon Sep 17 00:00:00 2001
+From: Artem <artem.vlasenko@ossrevival.org>
+Date: Fri, 2 May 2025 03:40:23 +0300
+Subject: [PATCH] Sort the blocking snapshots list #12751 (#17264)
+
+When multiple snapshots prevent the destruction/rollback of the
+respective dataset/snapshot/volume via zfs destroy or zfs rollback,
+the error message does not list the blocking snapshots sorted
+according to their order of creation. This causes inconvenience and can
+lead to confusion, and also creates a contrast with a returned message
+from zfs list -t snap function.
+
+Closes: #12751
+
+Signed-off-by: Artem-OSSRevival <artem.vlasenko@ossrevival.org>
+Reviewed-by: Alexander Motin <mav@FreeBSD.org>
+Reviewed-by: Tony Hutter <hutter2@llnl.gov>
+(cherry picked from commit 27f3d94940490d891c70e0c148f80d0c0ce09ed4)
+---
+ cmd/zfs/zfs_main.c       | 2 +-
+ lib/libzfs/libzfs_iter.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/cmd/zfs/zfs_main.c b/cmd/zfs/zfs_main.c
+index 2349373402ad..c9ebae575aeb 100644
+--- a/cmd/zfs/zfs_main.c
++++ b/cmd/zfs/zfs_main.c
+@@ -4440,7 +4440,7 @@ zfs_do_rollback(int argc, char **argv)
+ 	if (cb.cb_create > 0)
+ 		min_txg = cb.cb_create;
+ 
+-	if ((ret = zfs_iter_snapshots_v2(zhp, 0, rollback_check, &cb,
++	if ((ret = zfs_iter_snapshots_sorted_v2(zhp, 0, rollback_check, &cb,
+ 	    min_txg, 0)) != 0)
+ 		goto out;
+ 	if ((ret = zfs_iter_bookmarks_v2(zhp, 0, rollback_check, &cb)) != 0)
+diff --git a/lib/libzfs/libzfs_iter.c b/lib/libzfs/libzfs_iter.c
+index 1ce833c87ec6..1844ce1624b3 100644
+--- a/lib/libzfs/libzfs_iter.c
++++ b/lib/libzfs/libzfs_iter.c
+@@ -570,7 +570,7 @@ iter_dependents_cb(zfs_handle_t *zhp, void *arg)
+ 		err = zfs_iter_filesystems_v2(zhp, ida->flags,
+ 		    iter_dependents_cb, ida);
+ 		if (err == 0)
+-			err = zfs_iter_snapshots_v2(zhp, ida->flags,
++			err = zfs_iter_snapshots_sorted_v2(zhp, ida->flags,
+ 			    iter_dependents_cb, ida, 0, 0);
+ 		ida->stack = isf.next;
+ 	}
