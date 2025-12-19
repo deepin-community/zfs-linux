@@ -1,0 +1,51 @@
+From 0956fd736cd4ea054a446541a1596d1ac441ca0b Mon Sep 17 00:00:00 2001
+From: Artem-OSSRevival <artem.vlasenko@ossrevival.org>
+Date: Thu, 24 Apr 2025 04:17:52 +0300
+Subject: [PATCH] Add more descriptive destroy error message
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Reviewed-by: Tony Hutter <hutter2@llnl.gov>
+Reviewed-by: Alexander Motin <mav@FreeBSD.org>
+Reviewed-by: Tino Reichardt <milky-zfs@mcmilk.de>
+Reviewed by: Attila Fülöp <attila@fueloep.org>
+Signed-off-by: Artem-OSSRevival <artem.vlasenko@ossrevival.org>
+Fixes: #14538
+Closes: #17234
+(cherry picked from commit 37a3e26552158cb30a0bac0719c8dca40e22f245)
+---
+ lib/libzfs/libzfs_dataset.c | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+diff --git a/lib/libzfs/libzfs_dataset.c b/lib/libzfs/libzfs_dataset.c
+index 8d9639221c22..576493338613 100644
+--- a/lib/libzfs/libzfs_dataset.c
++++ b/lib/libzfs/libzfs_dataset.c
+@@ -4022,6 +4022,26 @@ zfs_destroy_snaps_nvl(libzfs_handle_t *hdl, nvlist_t *snaps, boolean_t defer)
+ 			    dgettext(TEXT_DOMAIN, "snapshot is cloned"));
+ 			ret = zfs_error(hdl, EZFS_EXISTS, errbuf);
+ 			break;
++		case EBUSY: {
++			nvlist_t *existing_holds;
++			int err = lzc_get_holds(nvpair_name(pair),
++			    &existing_holds);
++
++			/* check the presence of holders */
++			if (err == 0 && !nvlist_empty(existing_holds)) {
++				zfs_error_aux(hdl,
++				    dgettext(TEXT_DOMAIN, "it's being held. "
++				    "Run 'zfs holds -r %s' to see holders."),
++				    nvpair_name(pair));
++				ret = zfs_error(hdl, EBUSY, errbuf);
++			} else {
++				ret = zfs_standard_error(hdl, errno, errbuf);
++			}
++
++			if (err == 0)
++				nvlist_free(existing_holds);
++			break;
++		}
+ 		default:
+ 			ret = zfs_standard_error(hdl, errno, errbuf);
+ 			break;

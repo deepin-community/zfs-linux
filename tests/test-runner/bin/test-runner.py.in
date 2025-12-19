@@ -1,4 +1,5 @@
 #!/usr/bin/env @PYTHON_SHEBANG@
+# SPDX-License-Identifier: CDDL-1.0
 
 #
 # This file and its contents are supplied under the terms of the
@@ -111,7 +112,7 @@ class Result(object):
 class Output(object):
     """
     This class is a slightly modified version of the 'Stream' class found
-    here: http://goo.gl/aSGfv
+    here: https://stackoverflow.com/q/4984549/
     """
     def __init__(self, stream, debug=False):
         self.stream = stream
@@ -238,7 +239,15 @@ User: %s
             if os.path.isfile(cmd+'.sh') and os.access(cmd+'.sh', os.X_OK):
                 cmd += '.sh'
 
-        ret = '%s -E -u %s %s' % (SUDO, user, cmd)
+        # glibc (at least) will not pass TMPDIR through to setuid programs.
+        # if set, arrange for it to be reset before running the target cmd
+        tmpdir = os.getenv('TMPDIR')
+        if tmpdir:
+            tmpdirarg = 'env TMPDIR=%s' % tmpdir
+        else:
+            tmpdirarg = ''
+
+        ret = '%s -E -u %s %s %s' % (SUDO, user, tmpdirarg, cmd)
         return ret.split(' ')
 
     def collect_output(self, proc, debug=False):
@@ -291,6 +300,18 @@ User: %s
             try:
                 kp = Popen([SUDO, "sh", "-c",
                             f"echo ZTS run {self.pathname} > /dev/kmsg"])
+                kp.wait()
+            except Exception:
+                pass
+
+        """
+        Log each test we run to /dev/ttyu0 (on FreeBSD), so if there's a kernel
+        warning we'll be able to match it up to a particular test.
+        """
+        if options.kmsg is True and exists("/dev/ttyu0"):
+            try:
+                kp = Popen([SUDO, "sh", "-c",
+                            f"echo ZTS run {self.pathname} > /dev/ttyu0"])
                 kp.wait()
             except Exception:
                 pass
@@ -734,8 +755,11 @@ class TestRun(object):
 
         for opt in TestRun.props:
             if config.has_option('DEFAULT', opt):
-                setattr(self, opt, config.get('DEFAULT', opt))
-        self.outputdir = os.path.join(self.outputdir, self.timestamp)
+                if opt == 'outputdir':
+                    outputdir = config.get('DEFAULT', opt)
+                    setattr(self, opt, os.path.join(outputdir, self.timestamp))
+                else:
+                    setattr(self, opt, config.get('DEFAULT', opt))
 
         testdir = options.testdir
 
@@ -763,6 +787,11 @@ class TestRun(object):
                                 failsafe = config.get(sect, prop)
                                 setattr(testgroup, prop,
                                         os.path.join(testdir, failsafe))
+                            elif prop == 'outputdir':
+                                outputdir = config.get(sect, prop)
+                                setattr(self, opt,
+                                        os.path.join(outputdir,
+                                                     self.timestamp))
                             else:
                                 setattr(testgroup, prop,
                                         config.get(sect, prop))
@@ -781,6 +810,11 @@ class TestRun(object):
                                 failsafe = config.get(sect, prop)
                                 setattr(test, prop,
                                         os.path.join(testdir, failsafe))
+                            elif prop == 'outputdir':
+                                outputdir = config.get(sect, prop)
+                                setattr(self, opt,
+                                        os.path.join(outputdir,
+                                                     self.timestamp))
                             else:
                                 setattr(test, prop, config.get(sect, prop))
 

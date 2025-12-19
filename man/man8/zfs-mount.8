@@ -1,3 +1,4 @@
+.\" SPDX-License-Identifier: CDDL-1.0
 .\"
 .\" CDDL HEADER START
 .\"
@@ -39,6 +40,7 @@
 .Sh SYNOPSIS
 .Nm zfs
 .Cm mount
+.Op Fl j
 .Nm zfs
 .Cm mount
 .Op Fl Oflv
@@ -54,8 +56,13 @@
 .It Xo
 .Nm zfs
 .Cm mount
+.Op Fl j
 .Xc
 Displays all ZFS file systems currently mounted.
+.Bl -tag -width "-j"
+.It Fl j , -json
+Displays all mounted file systems in JSON format.
+.El
 .It Xo
 .Nm zfs
 .Cm mount

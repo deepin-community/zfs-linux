@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: CDDL-1.0
 /*
  * CDDL HEADER START
  *
@@ -29,6 +30,7 @@
 #include <sys/zfs_vnops.h>
 #include <sys/zfs_ctldir.h>
 #include <sys/zpl.h>
+#include <linux/iversion.h>
 
 
 static struct inode *
@@ -54,7 +56,6 @@ zpl_inode_destroy(struct inode *ip)
  * inode has changed.  We use it to ensure the znode system attributes
  * are always strictly update to date with respect to the inode.
  */
-#ifdef HAVE_DIRTY_INODE_WITH_FLAGS
 static void
 zpl_dirty_inode(struct inode *ip, int flags)
 {
@@ -64,17 +65,6 @@ zpl_dirty_inode(struct inode *ip, int flags)
 	zfs_dirty_inode(ip, flags);
 	spl_fstrans_unmark(cookie);
 }
-#else
-static void
-zpl_dirty_inode(struct inode *ip)
-{
-	fstrans_cookie_t cookie;
-
-	cookie = spl_fstrans_mark();
-	zfs_dirty_inode(ip, 0);
-	spl_fstrans_unmark(cookie);
-}
-#endif /* HAVE_DIRTY_INODE_WITH_FLAGS */
 
 /*
  * When ->drop_inode() is called its return value indicates if the
@@ -292,6 +282,7 @@ zpl_mount_impl(struct file_system_type *fs_type, int flags, zfs_mnt_t *zm)
 {
 	struct super_block *s;
 	objset_t *os;
+	boolean_t issnap = B_FALSE;
 	int err;
 
 	err = dmu_objset_hold(zm->mnt_osname, FTAG, &os);
@@ -323,6 +314,7 @@ zpl_mount_impl(struct file_system_type *fs_type, int flags, zfs_mnt_t *zm)
 		if (zpl_enter(zfsvfs, FTAG) == 0) {
 			if (os != zfsvfs->z_os)
 				err = -SET_ERROR(EBUSY);
+			issnap = zfsvfs->z_issnap;
 			zpl_exit(zfsvfs, FTAG);
 		} else {
 			err = -SET_ERROR(EBUSY);
@@ -346,7 +338,11 @@ zpl_mount_impl(struct file_system_type *fs_type, int flags, zfs_mnt_t *zm)
 			return (ERR_PTR(err));
 		}
 		s->s_flags |= SB_ACTIVE;
-	} else if ((flags ^ s->s_flags) & SB_RDONLY) {
+	} else if (!issnap && ((flags ^ s->s_flags) & SB_RDONLY)) {
+		/*
+		 * Skip ro check for snap since snap is always ro regardless
+		 * ro flag is passed by mount or not.
+		 */
 		deactivate_locked_super(s);
 		return (ERR_PTR(-EBUSY));
 	}
@@ -380,7 +376,26 @@ zpl_prune_sb(uint64_t nr_to_scan, void *arg)
 	struct super_block *sb = (struct super_block *)arg;
 	int objects = 0;
 
-	(void) -zfs_prune(sb, nr_to_scan, &objects);
+	/*
+	 * Ensure the superblock is not in the process of being torn down.
+	 */
+#ifdef HAVE_SB_DYING
+	if (down_read_trylock(&sb->s_umount)) {
+		if (!(sb->s_flags & SB_DYING) && sb->s_root &&
+		    (sb->s_flags & SB_BORN)) {
+			(void) zfs_prune(sb, nr_to_scan, &objects);
+		}
+		up_read(&sb->s_umount);
+	}
+#else
+	if (down_read_trylock(&sb->s_umount)) {
+		if (!hlist_unhashed(&sb->s_instances) &&
+		    sb->s_root && (sb->s_flags & SB_BORN)) {
+			(void) zfs_prune(sb, nr_to_scan, &objects);
+		}
+		up_read(&sb->s_umount);
+	}
+#endif
 }
 
 const struct super_operations zpl_super_operations = {

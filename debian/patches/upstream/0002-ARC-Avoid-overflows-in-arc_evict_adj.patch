@@ -1,0 +1,64 @@
+From 9b446fbb605e8ab938b45cda6c07fe0bbc865fc4 Mon Sep 17 00:00:00 2001
+From: Alexander Motin <mav@FreeBSD.org>
+Date: Tue, 6 May 2025 12:31:38 -0400
+Subject: [PATCH] ARC: Avoid overflows in arc_evict_adj() (#17255)
+
+With certain combinations of target ARC states balance and ghost
+hit rates it was possible to get the fractions outside of allowed
+range.  This patch limits maximum balance adjustment speed, which
+should make it impossible, and also asserts it.
+
+Fixes #17210
+Signed-off-by:	Alexander Motin <mav@FreeBSD.org>
+Sponsored by:	iXsystems, Inc.
+Reviewed-by: Rob Norris <robn@despairlabs.com>
+Reviewed-by: Tony Hutter <hutter2@llnl.gov>
+(cherry picked from commit b1ccab17213b38aa269e85c6b371d69eb25b6ca9)
+---
+ module/zfs/arc.c | 15 ++++++++++-----
+ 1 file changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/module/zfs/arc.c b/module/zfs/arc.c
+index 13590410acec..0e8b3b321bc7 100644
+--- a/module/zfs/arc.c
++++ b/module/zfs/arc.c
+@@ -4200,15 +4200,17 @@ static uint64_t
+ arc_evict_adj(uint64_t frac, uint64_t total, uint64_t up, uint64_t down,
+     uint_t balance)
+ {
+-	if (total < 8 || up + down == 0)
++	if (total < 32 || up + down == 0)
+ 		return (frac);
+ 
+ 	/*
+-	 * We should not have more ghost hits than ghost size, but they
+-	 * may get close.  Restrict maximum adjustment in that case.
++	 * We should not have more ghost hits than ghost size, but they may
++	 * get close.  To avoid overflows below up/down should not be bigger
++	 * than 1/5 of total.  But to limit maximum adjustment speed restrict
++	 * it some more.
+ 	 */
+-	if (up + down >= total / 4) {
+-		uint64_t scale = (up + down) / (total / 8);
++	if (up + down >= total / 16) {
++		uint64_t scale = (up + down) / (total / 32);
+ 		up /= scale;
+ 		down /= scale;
+ 	}
+@@ -4217,6 +4219,7 @@ arc_evict_adj(uint64_t frac, uint64_t total, uint64_t up, uint64_t down,
+ 	int s = highbit64(total);
+ 	s = MIN(64 - s, 32);
+ 
++	ASSERT3U(frac, <=, 1ULL << 32);
+ 	uint64_t ofrac = (1ULL << 32) - frac;
+ 
+ 	if (frac >= 4 * ofrac)
+@@ -4227,6 +4230,8 @@ arc_evict_adj(uint64_t frac, uint64_t total, uint64_t up, uint64_t down,
+ 	down = (down << s) / (total >> (32 - s));
+ 	down = down * 100 / balance;
+ 
++	ASSERT3U(up, <=, (1ULL << 32) - frac);
++	ASSERT3U(down, <=, frac);
+ 	return (frac + up - down);
+ }
+ 

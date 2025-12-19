@@ -1,3 +1,130 @@
+zfs-linux (2.3.2-2) unstable; urgency=medium
+
+  * d/patches: backport some fixes from 2.3.3 upstream release
+    (closes: #1106035).
+
+ -- Shengqi Chen <harry@debian.org>  Sun, 29 Jun 2025 21:54:37 +0800
+
+zfs-linux (2.3.2-1) unstable; urgency=medium
+
+  * New upstream version 2.3.2 (closes: #1104418).
+  * d/patches: refresh and remove applied patches.
+
+ -- Shengqi Chen <harry@debian.org>  Fri, 02 May 2025 17:46:51 +0800
+
+zfs-linux (2.3.1-1) unstable; urgency=medium
+
+  * New upstream version 2.3.1
+  * d/patches:
+    + remove applied patches in 2.3.1
+    + backport upstream patch to fix flushing on zvol (closes: #1100086)
+  * d/rules: install pyzfs documentation into usr/share/doc/python3-pyzfs
+    + add link for backward compatibility
+    + add pyzfs-doc.doc-base
+  * Add new symbols in libzpool6linux
+  * Remove unused lintian-overrides
+
+ -- Shengqi Chen <harry@debian.org>  Wed, 12 Mar 2025 13:56:58 +0800
+
+zfs-linux (2.3.0-2) unstable; urgency=medium
+
+  * cherry-pick upstream pre-2.3.1 patches
+
+ -- Aron Xu <aron@debian.org>  Mon, 03 Mar 2025 14:30:25 +0800
+
+zfs-linux (2.3.0-2~exp1) experimental; urgency=medium
+
+  [ Shengqi Chen ]
+  * d/tests: remove i386 from autopkgtest due to kernel support removed
+  * d/patches: backport compatibility patches for Liunx 6.12 and 6.13
+    (closes: #1093115)
+  * d/control: add Multi-Arch attributes for binary packages
+
+  [ Andreas Beckmann ]
+  * dkms.mkconf: switch to BUILD_EXCLUSIVE_CONFIG (closes: #1098887)
+  * dkms.mkconf: set BUILD_EXCLUSIVE_KERNEL_MIN to the value from META
+  * META: bump Linux-Minimum due to SHRINK_EMPTY usage
+
+ -- Shengqi Chen <harry@debian.org>  Wed, 26 Feb 2025 17:32:05 +0800
+
+zfs-linux (2.3.0-1) unstable; urgency=medium
+
+  [ Carles Pina i Estany ]
+  * Added po-debconf Catalan translation.
+
+  [ наб ]
+  * d/control: libzfslinux-dev Depends: libtirpc-dev, zlib1g-dev
+    (Closes: #1095855)
+
+  [ Shengqi Chen ]
+  * Upload to unstable (closes: #1093115, #1095583).
+
+ -- Shengqi Chen <harry@debian.org>  Sun, 16 Feb 2025 22:08:05 +0800
+
+zfs-linux (2.3.0-1~exp1) experimental; urgency=medium
+
+  * New upstream version 2.3.0
+    (No functional changes since 2.3.0~rc5-1.)
+
+ -- Shengqi Chen <harry@debian.org>  Tue, 14 Jan 2025 13:29:28 +0800
+
+zfs-linux (2.3.0~rc5-1~exp1.1) experimental; urgency=medium
+
+  * Non-maintainer upload.
+  * Add protective diversions for concurrent package rename and aliasing
+    change of libzfs_core.so.* (DEP17 P1 M8, Closes: #1092598)
+
+ -- Helmut Grohne <helmut@subdivi.de>  Fri, 10 Jan 2025 09:03:13 +0100
+
+zfs-linux (2.3.0~rc5-1~exp1) experimental; urgency=medium
+
+  [ Alexandre Detiste ]
+  * d/control: remove python3-distutils from Depends: alternative
+    (Closes: #1082141)
+
+  [ Shengqi Chen ]
+  * New upstream version 2.3.0~rc5
+    * Bump SONAME to libzpoollinux6
+  * d/not-installed: update list
+  * d/symbols: refresh symbol list for all libraries
+  * d/rules: run override_dh_autoreconf when building zfs-modules deb
+  * d/tests: remove call to autoreconf in binary-debs-modules script
+  * d/patches:
+    + refresh patches & disable bump-linux-maximum.patch
+    + add patch to fix pyzfs version
+
+ -- Shengqi Chen <harry@debian.org>  Tue, 07 Jan 2025 23:04:20 +0800
+
+zfs-linux (2.2.7-2) unstable; urgency=medium
+
+  * Add patch to fix simd_stat compilation on armel
+
+ -- Shengqi Chen <harry-chen@outlook.com>  Wed, 25 Dec 2024 16:11:41 +0800
+
+zfs-linux (2.2.7-1) unstable; urgency=medium
+
+  [ Aron Xu ]
+  * d/control: Breaks zfs-fuse (Closes: #1058684)
+
+  [ Shengqi Chen ]
+  * New upstream version 2.2.7 (Closes: #1089578, #1089488, #1084964)
+  * Refresh existing patches & symbol control files
+  * d/rules: skip installing upstream removed files
+  * d/copyright: remove superfluous files
+  * d/control: add zfs-fuse version to Breaks
+
+ -- Shengqi Chen <harry-chen@outlook.com>  Fri, 13 Dec 2024 01:31:52 +0800
+
+zfs-linux (2.2.6-2) unstable; urgency=high
+
+  [ Alexandre Detiste ]
+  * d/control: remove python3-distutils from Depends: alternative (Closes: #1082141)
+
+  [ Aron Xu ]
+  * Revert "d/patches: add bump-linux-maximum.patch"
+
+ -- Aron Xu <aron@debian.org>  Sat, 12 Oct 2024 19:05:55 +0800
+
 zfs-linux (2.2.6-1) unstable; urgency=medium
 
   * New upstream version 2.2.6
@@ -78,6 +205,50 @@ zfs-linux (2.2.3-1) unstable; urgency=medium
       + enable ubuntu/zfs-mount-container-start.patch
 
  -- Shengqi Chen <harry-chen@outlook.com>  Fri, 23 Feb 2024 21:28:24 +0800
+
+zfs-linux (2.2.3-1~exp1) UNRELEASED; urgency=medium
+
+  * New upstream version 2.2.3
+    - add compatibility with Linux 6.6 (closes: #1060899)
+    - fix private mmap permission of R/O files (closes: #1052472)
+    - and many more fixes (see upstream changelog)
+  * d/patches:
+    - remove some applied / outdated patches
+    - fix a typo in 2100-zfs-load-module.patch (related: #1041857)
+    - enable ubuntu/zfs-mount-container-start.patch
+  * d/: add new symbols for libzfs4 and libzpool5
+
+ -- Shengqi Chen <harry-chen@outlook.com>  Fri, 23 Feb 2024 15:59:29 +0800
+
+zfs-linux (2.2.2-5~exp4) UNRELEASED; urgency=medium
+
+  [ Shengqi Chen ]
+  * d/: update rule names in lintian-overrides, fix typos, lift dh-compat to 13
+  * d/not-installed: remove actually installed files
+
+  [ Aron Xu ]
+  * d/control.ubuntu: Conflicts with nordugrid-arc-client
+
+ -- Shengqi Chen <harry-chen@outlook.com>  Fri, 23 Feb 2024 14:08:02 +0800
+
+zfs-linux (2.2.2-5~exp3) experimental; urgency=medium
+
+  * Remove more obsolete lintian overrides
+  * d/control: zfsutils-linux now conflicts with nordugrid-arc-client
+    (Closes: #1063392)
+  * d/NEWS: add notice on usr-merge and package conflict
+
+ -- Shengqi Chen <harry-chen@outlook.com>  Wed, 07 Feb 2024 23:11:07 +0800
+
+zfs-linux (2.2.2-5~exp2) experimental; urgency=medium
+
+  * d/tests: add missing header dependency and fix zfs-test-suite
+    (Closes: #983661)
+  * d/tests: refactor kernel-smoke-test, add tests for draid[1-3]
+  * d/: install files into /usr (Closes: #1061359)
+  * d/: move some tools out of /usr/sbin and add links for compatibility
+
+ -- Shengqi Chen <harry-chen@outlook.com>  Mon, 05 Feb 2024 22:44:24 +0800
 
 zfs-linux (2.2.2-5~exp1) experimental; urgency=medium
 

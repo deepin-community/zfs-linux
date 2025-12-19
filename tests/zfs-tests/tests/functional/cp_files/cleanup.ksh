@@ -1,4 +1,5 @@
 #!/bin/ksh -p
+# SPDX-License-Identifier: CDDL-1.0
 #
 # CDDL HEADER START
 #
@@ -32,7 +33,3 @@
 . $STF_SUITE/include/libtest.shlib
 
 default_cleanup
-
-if tunable_exists BCLONE_ENABLED ; then
-	log_must restore_tunable BCLONE_ENABLED
-fi

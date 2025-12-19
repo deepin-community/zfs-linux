@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-2-Clause
 /*
  * Copyright (c) 2020 iXsystems, Inc.
  * All rights reserved.
@@ -25,9 +26,6 @@
  *
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include <sys/types.h>
 #include <sys/errno.h>
 #include <sys/nvpair.h>
@@ -38,10 +36,6 @@ __FBSDID("$FreeBSD$");
 #include <vm/vm_pageout.h>
 
 #include <sys/zfs_ioctl_impl.h>
-
-#if __FreeBSD_version < 1201517
-#define	vm_page_max_user_wired	vm_page_max_wired
-#endif
 
 int
 zfs_vfs_ref(zfsvfs_t **zfvp)

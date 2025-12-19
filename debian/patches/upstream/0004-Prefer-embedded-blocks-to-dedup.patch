@@ -1,0 +1,64 @@
+From 602fecc316ae00febe2ba1af7d2ef5b9e2a82437 Mon Sep 17 00:00:00 2001
+From: Alexander Motin <mav@FreeBSD.org>
+Date: Thu, 13 Mar 2025 13:27:15 -0400
+Subject: [PATCH] Prefer embedded blocks to dedup
+
+Since embedded blocks introduction 11 years ago, their writing was
+blocked if dedup is enabled.  After searching through the modern
+code I see no reason for this restriction to exist.  Same time
+embedded blocks are dramatically cheaper.  Even regular write of
+so small blocks would likely be cheaper than deduplication, even
+if the last is successful, not mentioning otherwise.
+
+Reviewed-by: Allan Jude <allan@klarasystems.com>
+Reviewed-by: Tony Hutter <hutter2@llnl.gov>
+Signed-off-by:	Alexander Motin <mav@FreeBSD.org>
+Sponsored by:	iXsystems, Inc.
+Closes #17113
+(cherry picked from commit 09f4dd06c3e3275e1aa0b8d12a894cf140d19c3f)
+---
+ module/zfs/zio.c                                               | 3 +--
+ .../cli_root/zpool_prefetch/zpool_prefetch_001_pos.ksh         | 2 +-
+ tests/zfs-tests/tests/functional/dedup/dedup_quota.ksh         | 2 +-
+ 3 files changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/module/zfs/zio.c b/module/zfs/zio.c
+index f0328e84e1a6..132f6c677e58 100644
+--- a/module/zfs/zio.c
++++ b/module/zfs/zio.c
+@@ -2006,8 +2006,7 @@ zio_write_compress(zio_t *zio)
+ 			compress = ZIO_COMPRESS_OFF;
+ 			if (cabd != NULL)
+ 				abd_free(cabd);
+-		} else if (!zp->zp_dedup && !zp->zp_encrypt &&
+-		    psize <= BPE_PAYLOAD_SIZE &&
++		} else if (psize <= BPE_PAYLOAD_SIZE && !zp->zp_encrypt &&
+ 		    zp->zp_level == 0 && !DMU_OT_HAS_FILL(zp->zp_type) &&
+ 		    spa_feature_is_enabled(spa, SPA_FEATURE_EMBEDDED_DATA)) {
+ 			void *cbuf = abd_borrow_buf_copy(cabd, lsize);
+diff --git a/tests/zfs-tests/tests/functional/cli_root/zpool_prefetch/zpool_prefetch_001_pos.ksh b/tests/zfs-tests/tests/functional/cli_root/zpool_prefetch/zpool_prefetch_001_pos.ksh
+index 0f8b0dfd6c97..8ef3a66ad0d9 100755
+--- a/tests/zfs-tests/tests/functional/cli_root/zpool_prefetch/zpool_prefetch_001_pos.ksh
++++ b/tests/zfs-tests/tests/functional/cli_root/zpool_prefetch/zpool_prefetch_001_pos.ksh
+@@ -76,7 +76,7 @@ log_must zpool prefetch -t ddt $TESTPOOL
+ # to generate a reasonable size DDT for testing purposes.
+ 
+ DATASET=$TESTPOOL/ddt
+-log_must zfs create -o dedup=on $DATASET
++log_must zfs create -o compression=off -o dedup=on $DATASET
+ MNTPOINT=$(get_prop mountpoint $TESTPOOL/ddt)
+ 
+ log_note "Generating dataset ..."
+diff --git a/tests/zfs-tests/tests/functional/dedup/dedup_quota.ksh b/tests/zfs-tests/tests/functional/dedup/dedup_quota.ksh
+index 141286ba7c07..bcb8a89dbb4d 100755
+--- a/tests/zfs-tests/tests/functional/dedup/dedup_quota.ksh
++++ b/tests/zfs-tests/tests/functional/dedup/dedup_quota.ksh
+@@ -80,7 +80,7 @@ function do_setup
+ 	log_must truncate -s 5G $VDEV_GENERAL
+ 	# Use 'xattr=sa' to prevent selinux xattrs influencing our accounting
+ 	log_must zpool create -o ashift=12 -f -O xattr=sa -m $MOUNTDIR $POOL $VDEV_GENERAL
+-	log_must zfs set dedup=on $POOL
++	log_must zfs set compression=off dedup=on $POOL
+ 	log_must set_tunable32 TXG_TIMEOUT 600
+ }
+ 

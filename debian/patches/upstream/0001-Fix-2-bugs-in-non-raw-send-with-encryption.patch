@@ -1,0 +1,72 @@
+From f28c685a84e6e51865354656fb639c92c0fdafd9 Mon Sep 17 00:00:00 2001
+From: George Amanakis <gamanakis@gmail.com>
+Date: Mon, 19 May 2025 18:55:00 +0200
+Subject: [PATCH] Fix 2 bugs in non-raw send with encryption
+
+Bisecting identified the redacted send/receive as the source of the bug
+for issue #12014. Specifically the call to
+dsl_dataset_hold_obj(&fromds) has been replaced by
+dsl_dataset_hold_obj_flags() which passes a DECRYPT flag and creates
+a key mapping. A subsequent dsl_dataset_rele_flag(&fromds) is missing
+and the key mapping is not cleared. This may be inadvertedly used, which
+results in arc_untransform failing with ECKSUM in:
+ arc_untransform+0x96/0xb0 [zfs]
+ dbuf_read_verify_dnode_crypt+0x196/0x350 [zfs]
+ dbuf_read+0x56/0x770 [zfs]
+ dmu_buf_hold_by_dnode+0x4a/0x80 [zfs]
+ zap_lockdir+0x87/0xf0 [zfs]
+ zap_lookup_norm+0x5c/0xd0 [zfs]
+ zap_lookup+0x16/0x20 [zfs]
+ zfs_get_zplprop+0x8d/0x1d0 [zfs]
+ setup_featureflags+0x267/0x2e0 [zfs]
+ dmu_send_impl+0xe7/0xcb0 [zfs]
+ dmu_send_obj+0x265/0x360 [zfs]
+ zfs_ioc_send+0x10c/0x280 [zfs]
+
+Fix this by restoring the call to dsl_dataset_hold_obj().
+
+The same applies for to_ds: here replace dsl_dataset_rele(&to_ds) with
+dsl_dataset_rele_flags().
+
+Both leaked key mappings will cause a panic when exporting the
+sending pool or unloading the zfs module after a non-raw send from
+an encrypted filesystem.
+
+Contributions-by: Hank Barta <hbarta@gmail.com>
+Contributions-by: Paul Dagnelie <paul.dagnelie@klarasystems.com>
+Reviewed-by: Alexander Motin <mav@FreeBSD.org>
+Reviewed-by: Richard Yao <richard.yao@alumni.stonybrook.edu>
+Reviewed-by: Rob Norris <robn@despairlabs.com>
+Reviewed-by: Brian Behlendorf <behlendorf1@llnl.gov>
+Signed-off-by: George Amanakis <gamanakis@gmail.com>
+Closes #12014
+Closes #17340
+(cherry picked from commit ea74cdedda8b9575d7e94198d38f12943ac41343)
+---
+ module/zfs/dmu_send.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/module/zfs/dmu_send.c b/module/zfs/dmu_send.c
+index e21af11d20d1..4f27f3df0e55 100644
+--- a/module/zfs/dmu_send.c
++++ b/module/zfs/dmu_send.c
+@@ -2687,8 +2687,8 @@ dmu_send_obj(const char *pool, uint64_t tosnap, uint64_t fromsnap,
+ 	}
+ 
+ 	if (fromsnap != 0) {
+-		err = dsl_dataset_hold_obj_flags(dspp.dp, fromsnap, dsflags,
+-		    FTAG, &fromds);
++		err = dsl_dataset_hold_obj(dspp.dp, fromsnap, FTAG, &fromds);
++
+ 		if (err != 0) {
+ 			dsl_dataset_rele_flags(dspp.to_ds, dsflags, FTAG);
+ 			dsl_pool_rele(dspp.dp, FTAG);
+@@ -2740,7 +2740,7 @@ dmu_send_obj(const char *pool, uint64_t tosnap, uint64_t fromsnap,
+ 		kmem_free(dspp.fromredactsnaps,
+ 		    dspp.numfromredactsnaps * sizeof (uint64_t));
+ 
+-	dsl_dataset_rele(dspp.to_ds, FTAG);
++	dsl_dataset_rele_flags(dspp.to_ds, dsflags, FTAG);
+ 	return (err);
+ }
+ 
